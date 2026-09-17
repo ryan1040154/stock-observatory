@@ -1,4 +1,4 @@
-import {cached,database} from './storage';
+import {cached,database} from './storage.ts';
 export type Quote={symbol:string;name:string;close:number|null;change:number|null;volume:number|null;date:string;market:string};
 export type Chip={symbol:string;date:string;foreign:number|null;trust:number|null;dealer:number|null};
 export type Holding={symbol:string;date:string;over400:number;over1000:number;holders:number};

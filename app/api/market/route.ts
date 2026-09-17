@@ -1,8 +1,8 @@
-import {getChatGPTUser} from '@/app/chatgpt-auth';
-import {twse,tpex,institutions,otcInstitutions,holdings,futures,overseas,usQuote,recordObservations,stockHistory} from '@/lib/market';
+
+import {twse,tpex,institutions,otcInstitutions,holdings,futures,overseas,usQuote,recordObservations,stockHistory} from '../../../lib/market.ts';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{
- if(!await getChatGPTUser())return Response.json({error:'請先登入以讀取資料。'},{status:401});
+
  const q=new URL(request.url).searchParams;const group=q.get('group')||'quotes';const headers={'Cache-Control':'no-store'};
  if(group==='quotes'){const [a,b]=await Promise.all([twse(),tpex()]);return Response.json({quotes:[...(a.data?.quotes||[]),...(b.data||[])],index:a.data?.index,status:[{name:'上市收盤',updated:a.updated,error:a.error},{name:'上櫃收盤',updated:b.updated,error:b.error}]},{headers});}
  if(group==='global'){const all=await Promise.all([futures(),...overseas.map(([s,n])=>usQuote(s,n))]);return Response.json({items:all.map((r,i)=>({...(r.data||{symbol:i===0?'TX':overseas[i-1][0],name:i===0?'台指期夜盤':overseas[i-1][1]}),updated:r.updated,error:r.error}))},{headers});}
