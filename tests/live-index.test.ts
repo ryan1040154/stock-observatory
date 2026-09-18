@@ -1,0 +1,6 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {parseLiveIndex,createLiveIndexService} from '../lib/live-index.ts';
+const payload=(time='09:30:00',z='22,200.00')=>({rtcode:'0000',msgArray:[{c:'t00',ex:'tse',d:'20260918',t:time,z,y:'22000'}]});
+test('MIS parser uses actual source quote time and rejects missing values',()=>{const r=parseLiveIndex(payload());assert.equal(r.close,22200);assert.equal(r.change,200);assert.equal(r.quoteAt,Date.parse('2026-09-18T09:30:00+08:00'));assert.throws(()=>parseLiveIndex(payload('09:30:00','-')));assert.throws(()=>parseLiveIndex(payload('25:00:00')));});
+test('live polling coalesces clients, throttles requests and preserves timestamp on failure',async()=>{let clock=100000,count=0,fail=false;const service=createLiveIndexService(async()=>{count++;if(fail)throw new Error('offline');return payload();},()=>clock);const [a,b]=await Promise.all([service(),service()]);assert.equal(count,1);assert.equal(a.data?.close,b.data?.close);await service();assert.equal(count,1);clock+=15000;fail=true;const stale=await service();assert.equal(count,2);assert.ok(stale.error);assert.equal(stale.data?.quoteAt,a.data?.quoteAt);assert.equal(stale.checked,clock);});

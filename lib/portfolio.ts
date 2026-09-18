@@ -1,7 +1,9 @@
-export type Trade={id:string;date:string;broker:'新光'|'中信';symbol:string;name:string;kind:'buy'|'sell'|'dividend';shares:number;price:number;fee:number;tax:number;amount:number;note:string};
-export type Portfolio={trades:Trade[];watchlist:string[]};
+export type Trade={id:string;date:string;broker:string;symbol:string;name:string;kind:'buy'|'sell'|'dividend';shares:number;price:number;fee:number;tax:number;amount:number;note:string};
+export type Portfolio={trades:Trade[];watchlist:string[];accounts:string[]};
 export type Position={broker:string;symbol:string;name:string;shares:number;cost:number;realized:number;dividends:number};
-export const emptyPortfolio=():Portfolio=>({trades:[],watchlist:['2330','2317','2454','2382','3231','6669']});
+export const emptyPortfolio=():Portfolio=>({trades:[],watchlist:['2330','2317','2454','2382','3231','6669'],accounts:['新光','中信']});
+export function accountName(v:unknown):string{if(typeof v!=='string'||!v.trim()||v.trim().length>40||/[\u0000-\u001f]/.test(v)||v.trim()==='all')throw new Error('帳戶名稱需為 1–40 個字。');return v.trim();}
+export function normalizePortfolio(p:Portfolio):Portfolio{return {...p,accounts:[...new Set([...(p.accounts||['新光','中信']),...p.trades.map(t=>t.broker)])]};}
 export const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function calculate(trades:Trade[]):Position[]{
  const map=new Map<string,Position>();
@@ -17,7 +19,8 @@ export function calculate(trades:Trade[]):Position[]{
 }
 export function validateTrade(v:unknown):Trade{
  if(!v||typeof v!=='object')throw new Error('交易格式不正確');const t=v as Trade;
- if(!/^[a-zA-Z0-9-]{10,64}$/.test(t.id)||!['新光','中信'].includes(t.broker)||!['buy','sell','dividend'].includes(t.kind)||!/^\d{4,6}[A-Z]?$/.test(t.symbol)||typeof t.name!=='string'||t.name.length>40||typeof t.note!=='string'||t.note.length>300)throw new Error('請確認券商、股票代號與交易類型。');
+ accountName(t.broker);
+ if(!/^[a-zA-Z0-9-]{10,64}$/.test(t.id)||!['buy','sell','dividend'].includes(t.kind)||!/^\d{4,6}[A-Z]?$/.test(t.symbol)||typeof t.name!=='string'||t.name.length>40||typeof t.note!=='string'||t.note.length>300)throw new Error('請確認帳戶、股票代號與交易類型。');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(t.date)||!Number.isFinite(Date.parse(t.date))||new Date(t.date).toISOString().slice(0,10)!==t.date||t.date>today())throw new Error('請輸入有效且不晚於今天的日期。');
  for(const n of ['shares','price','fee','tax','amount'] as const)if(typeof t[n]!=='number'||!Number.isFinite(t[n])||t[n]<0||t[n]>1e9)throw new Error('金額與股數必須是有效的非負數。');
  if(!Number.isInteger(t.shares)||t.shares>1e7)throw new Error('股數必須是整數，請以股而非張輸入。');

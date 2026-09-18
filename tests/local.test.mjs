@@ -23,6 +23,11 @@ test('local account-free storage, validation, import, origin protection and rest
  r=await post({revision:2,action:'import',backup:{...backup,watchlist:['evil']}});assert.equal(r.status,400);
  assert.equal((await fetch(url+'/data/chipfolio.sqlite')).status,404);
  assert.equal((await fetch(url+'/api/portfolio',{headers:{'sec-fetch-site':'cross-site'}})).status,403);
- await stop();url=await start();r=await fetch(url+'/api/portfolio');const saved=await r.json();assert.equal(saved.revision,2);assert.equal(saved.portfolio.trades[0].price,1000);
+ r=await post({revision:2,action:'account',operation:'rename',old:'新光',name:'新光・退休'});assert.equal(r.status,200);assert.equal((await r.json()).portfolio.trades[0].broker,'新光・退休');
+ assert.equal((await post({revision:3,action:'account',operation:'delete',name:'新光・退休'})).status,400);
+ assert.equal((await post({revision:3,action:'account',operation:'add',name:'元大'})).status,200);
+ r=await post({revision:4,action:'add',trade:{...trade,id:'custom-trade-0003',broker:'元大'}});assert.equal(r.status,200);
+ assert.equal((await post({revision:5,action:'account',operation:'rename',old:'元大',name:'中信'})).status,400);
+ await stop();url=await start();r=await fetch(url+'/api/portfolio');const saved=await r.json();assert.equal(saved.revision,5);assert.equal(saved.portfolio.trades[0].price,1000);assert.ok(saved.portfolio.accounts.includes('元大'));
  }finally{if(child&&!child.killed)await stop();await rm(data,{recursive:true,force:true});}
 });
