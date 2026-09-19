@@ -1,12 +1,14 @@
 
 import {twse,tpex,institutions,otcInstitutions,holdings,futures,overseas,usQuote,recordObservations,stockHistory} from '../../../lib/market.ts';
 import {liveIndex} from '../../../lib/live-index.ts';
+import {liveStocks} from '../../../lib/live-stocks.ts';
 import {indexIntraday,indexDaily} from '../../../lib/index-data.ts';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{
 
  const q=new URL(request.url).searchParams;const group=q.get('group')||'quotes';const force=q.get('refresh')==='1';const headers={'Cache-Control':'no-store'};
  if(group==='live-index')return Response.json(await liveIndex(),{headers});
+ if(group==='live-stocks'){const symbols=(q.get('symbols')||'').split(',');if(symbols.length>50||symbols.some(s=>!/^\d{4,6}[A-Z]?$/.test(s)))return Response.json({error:'股票代號格式錯誤或超過 50 檔'},{status:400});return Response.json(await liveStocks(symbols),{headers});}
  if(group==='index-intraday')return Response.json(await indexIntraday(),{headers});
  if(group==='index-daily')return Response.json(await indexDaily(force),{headers});
  if(group==='quotes'){const [a,b]=await Promise.all([twse(force),tpex(force)]);return Response.json({quotes:[...(a.data?.quotes||[]),...(b.data||[])],index:a.data?.index,status:[{name:'上市收盤',updated:a.updated,checked:a.checked,cached:a.cached,error:a.error},{name:'上櫃收盤',updated:b.updated,checked:b.checked,cached:b.cached,error:b.error}]},{headers});}
